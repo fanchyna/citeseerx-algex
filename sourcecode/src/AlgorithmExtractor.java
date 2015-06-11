@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.FilenameUtils;
+import org.apache.pdfbox.pdmodel.PDDocument;
 
 /**
  * Main class for extracting algorithms from a pdf file
@@ -20,6 +21,7 @@ public class AlgorithmExtractor {
 	public final String csxdbpassword = "csx-read";
 	public final String TEMPPATH = "./temp";
 	public final String PERLDIR = "./perl";
+	public final int MAX_PAPER_PAGES = 50;
 	
 	
 	public void extractAlgorithmsFromPDF(String inputFilename, String docID, String outputFilename)
@@ -34,11 +36,27 @@ public class AlgorithmExtractor {
 	public void extractAlgorithmsFromPDF(String inputFilename, String docID, String outputFilename, String _perlpath)
 	{	System.out.println("Processing .. "+inputFilename);
 		//ConfigReader config = new ConfigReader();
-		String tempDirPath = TEMPPATH;
+		String tempDirPath = TEMPPATH+"_"+docID;
 		String perlPath = PERLDIR;
 		if(_perlpath != null) perlPath = _perlpath;
 		
 		String cmd = "";
+		
+		//check file size (# of pages)
+		PDDocument doc;
+		try {
+			doc = PDDocument.load(new File(inputFilename));
+			int numPages = doc.getNumberOfPages();
+			
+			if(numPages > MAX_PAPER_PAGES)
+			{
+				System.out.println("@@@ Skipping "+inputFilename+" (too large).");
+				return;
+			}
+		} catch (IOException e1) {
+			e1.printStackTrace();
+		}
+		
 		
 		//make sure temp dirs are cleared
 		clearTempFiles(tempDirPath);
@@ -73,7 +91,12 @@ public class AlgorithmExtractor {
 		
 		
 		//clean up the temp files
-		clearTempFiles(tempDirPath);
+		//clearTempFiles(tempDirPath);
+		try {
+			FileUtils.deleteDirectory(new File(tempDirPath));
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
 	}
 	
 	static private void clearTempFiles(String tempDirPath)
@@ -219,7 +242,7 @@ public class AlgorithmExtractor {
 		}
 		else if(mode.equalsIgnoreCase("d"))
 		{
-			batchExtract(input, outputDir, true);
+			batchExtract(input, outputDir, false);
 		}
 		else
 		{
